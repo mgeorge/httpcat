@@ -66,8 +66,17 @@ func sendRequest(uri string) {
 	if(err != nil) {
 		fmt.Println(err);
 	} else {
-		dump, _ := httputil.DumpResponse(response, true)
-		fmt.Println(string(dump[:]))
+
+		// print complete response
+		if complete {
+			dump, _ := httputil.DumpResponse(response, true)
+			fmt.Println(string(dump[:]))
+
+		// print only the response body
+		} else {
+			body, _ := ioutil.ReadAll(response.Body)
+			fmt.Println(string(body[:]));
+		}
 	}
 }
 
