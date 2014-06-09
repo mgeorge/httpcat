@@ -52,6 +52,25 @@ func requestHandler(resp http.ResponseWriter, req *http.Request) {
 
 }
 
+func startServer() {
+	http.HandleFunc("/", requestHandler)
+
+	if err := http.ListenAndServe(":"+strconv.Itoa(port), nil); err != nil {
+		fmt.Printf("Could not start server.  Is port %d available?\n", port)
+	}
+}
+
+func sendRequest(uri string) {
+	response, err := http.Get(uri)
+
+	if(err != nil) {
+		fmt.Println(err);
+	} else {
+		dump, _ := httputil.DumpResponse(response, true)
+		fmt.Println(string(dump[:]))
+	}
+}
+
 func parseCommandLine() {
 	flag.IntVar(&port, "port", 8080, "")
 	flag.IntVar(&port, "p", 8080, "")
@@ -90,25 +109,6 @@ func parseCommandLine() {
 		}
 	}
 
-}
-
-func startServer() {
-	http.HandleFunc("/", requestHandler)
-
-	if err := http.ListenAndServe(":"+strconv.Itoa(port), nil); err != nil {
-		fmt.Printf("Could not start server.  Is port %d available?\n", port)
-	}
-}
-
-func sendRequest(uri string) {
-		response, err := http.Get(uri)
-
-		if(err != nil) {
-			fmt.Println(err);
-		} else {
-			dump, _ := httputil.DumpResponse(response, true)
-			fmt.Println(string(dump[:]))
-		}
 }
 
 var usage = func() {
