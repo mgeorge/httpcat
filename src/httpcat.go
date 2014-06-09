@@ -24,6 +24,7 @@ var (
 	verbose  bool
 	server   bool
 	uri      string
+	accept   string
 )
 
 func requestHandler(resp http.ResponseWriter, req *http.Request) {
@@ -38,7 +39,7 @@ func requestHandler(resp http.ResponseWriter, req *http.Request) {
 	// print only request body
 	} else {
 		body, _ := ioutil.ReadAll(req.Body)
-		fmt.Println(string(body[:]));
+		fmt.Println(string(body[:]))
 	}
 
 	// send response
@@ -56,15 +57,25 @@ func startServer() {
 	http.HandleFunc("/", requestHandler)
 
 	if err := http.ListenAndServe(":"+strconv.Itoa(port), nil); err != nil {
-		fmt.Printf("Could not start server.  Is port %d available?\n", port)
+		fmt.Fprintf(os.Stderr, "Could not start server.  Is port %d available?\n", port)
 	}
 }
 
 func sendRequest(uri string) {
-	response, err := http.Get(uri)
+
+	client := http.Client{}
+
+	request, _ := http.NewRequest("GET", uri, nil)
+
+	// add Accept header if required by user
+	if accept != "" {
+		request.Header.Add("Accept", accept)
+	}
+
+	response, err := client.Do(request)
 
 	if(err != nil) {
-		fmt.Println(err);
+		fmt.Fprintln(os.Stderr, err)
 	} else {
 
 		// print complete response
@@ -75,7 +86,7 @@ func sendRequest(uri string) {
 		// print only the response body
 		} else {
 			body, _ := ioutil.ReadAll(response.Body)
-			fmt.Println(string(body[:]));
+			fmt.Println(string(body[:]))
 		}
 	}
 }
@@ -93,18 +104,21 @@ func parseCommandLine() {
 	flag.BoolVar(&complete, "complete", false, "")
 	flag.BoolVar(&complete, "c", false, "")
 
-	flag.BoolVar(&verbose, "verbose", false, "");
-	flag.BoolVar(&verbose, "v", false, "");
+	flag.BoolVar(&verbose, "verbose", false, "")
+	flag.BoolVar(&verbose, "v", false, "")
 
-	serverMode := flag.Bool("listen", false, "");
-	clientMode := flag.Bool("get", false, "");
+	flag.StringVar(&accept, "accept", "", "")
+	flag.StringVar(&accept, "a", "", "")
+
+	serverMode := flag.Bool("listen", false, "")
+	clientMode := flag.Bool("get", false, "")
 
 	flag.Usage = usage
 
 	flag.Parse()
 
 	if !(*serverMode || *clientMode) || (*serverMode && *clientMode) {
-		usage();
+		usage()
 		os.Exit(1)
 	} else {
 		server = *serverMode
@@ -113,7 +127,7 @@ func parseCommandLine() {
 	if *clientMode {
 		uri = flag.Arg(0)
 		if uri == "" {
-			usage();
+			usage()
 			os.Exit(1)
 		}
 	}
@@ -123,15 +137,18 @@ func parseCommandLine() {
 var usage = func() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "  Client mode\n\n")
+	fmt.Fprintf(os.Stderr, "  Client mode\n")
 	fmt.Fprintf(os.Stderr, "    httpcat -get [options] http://uri-to-send-request-to.com\n")
-	fmt.Fprintf(os.Stderr, "\n\n")
-	fmt.Fprintf(os.Stderr, "  Server mode\n\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "  Server mode\n")
 	fmt.Fprintf(os.Stderr, "    httpcat -listen [options]\n")
-	fmt.Fprintf(os.Stderr, "\n\n")
-	fmt.Fprintf(os.Stderr, "  Options (client or server mode)\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "  Options (either mode)\n")
 	fmt.Fprintf(os.Stderr, "    -complete or -c : Display entire request/response instead of just the body.\n")
 	fmt.Fprintf(os.Stderr, "    -verbose or -v : Be verbose.\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "  Options (client mode only)\n")
+	fmt.Fprintf(os.Stderr, "    -accept or -a [accept string] : Adds 'Accept' header to request.\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Options (server mode only)\n")
 	fmt.Fprintf(os.Stderr, "    -port or -p [port] : Port to listen on.\n")
@@ -158,7 +175,7 @@ func main() {
 
 		// client mode
 
-		if verbose { fmt.Println("Sending GET request to " + uri); }
+		if verbose { fmt.Println("Sending GET request to " + uri) }
 		sendRequest(uri)
 	}
 }
