@@ -17,14 +17,15 @@ import (
 )
 
 var (
-	port     int
-	status   int
-	body     string
-	complete bool
-	verbose  bool
-	server   bool
-	uri      string
-	accept   string
+	port      int
+	status    int
+	body      string
+	complete  bool
+	verbose   bool
+	server    bool
+	uri       string
+	accept    string
+	separator string
 )
 
 func requestHandler(resp http.ResponseWriter, req *http.Request) {
@@ -51,6 +52,9 @@ func requestHandler(resp http.ResponseWriter, req *http.Request) {
 		resp.WriteHeader(status)
 	}
 
+	if separator != "" {
+		fmt.Println(separator)
+	}
 }
 
 func startServer() {
@@ -95,8 +99,8 @@ func parseCommandLine() {
 	flag.IntVar(&port, "port", 8080, "")
 	flag.IntVar(&port, "p", 8080, "")
 
-	flag.IntVar(&status, "status", 204, "")
-	flag.IntVar(&status, "s", 204, "")
+	flag.IntVar(&status, "response", 204, "")
+	flag.IntVar(&status, "r", 204, "")
 
 	flag.StringVar(&body, "body", "", "")
 	flag.StringVar(&body, "b", "", "")
@@ -104,14 +108,17 @@ func parseCommandLine() {
 	flag.BoolVar(&complete, "complete", false, "")
 	flag.BoolVar(&complete, "c", false, "")
 
+	flag.StringVar(&separator, "separator", "", "")
+	flag.StringVar(&separator, "s", "", "")
+
 	flag.BoolVar(&verbose, "verbose", false, "")
 	flag.BoolVar(&verbose, "v", false, "")
 
 	flag.StringVar(&accept, "accept", "", "")
 	flag.StringVar(&accept, "a", "", "")
 
-	serverMode := flag.Bool("listen", false, "")
-	clientMode := flag.Bool("get", false, "")
+	serverMode := flag.Bool("server", false, "")
+	clientMode := flag.Bool("client", false, "")
 
 	flag.Usage = usage
 
@@ -138,10 +145,10 @@ var usage = func() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Client mode\n")
-	fmt.Fprintf(os.Stderr, "    httpcat -get [options] http://uri-to-send-request-to.com\n")
+	fmt.Fprintf(os.Stderr, "    httpcat -client [options] http://uri-to-send-request-to.com\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Server mode\n")
-	fmt.Fprintf(os.Stderr, "    httpcat -listen [options]\n")
+	fmt.Fprintf(os.Stderr, "    httpcat -server [options]\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Options (either mode)\n")
 	fmt.Fprintf(os.Stderr, "    -complete or -c : Display entire request/response instead of just the body.\n")
@@ -151,9 +158,10 @@ var usage = func() {
 	fmt.Fprintf(os.Stderr, "    -accept or -a [accept string] : Adds 'Accept' header to request.\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Options (server mode only)\n")
+	fmt.Fprintf(os.Stderr, "    -body or -b [body message] : Body to respond with.  Response code will default to 200.\n")
 	fmt.Fprintf(os.Stderr, "    -port or -p [port] : Port to listen on.\n")
-	fmt.Fprintf(os.Stderr, "    -body or -b [body message] : Body to respond with.  Status will default to 200.\n")
-	fmt.Fprintf(os.Stderr, "    -status or -s [status code] : Status code to respond with.  Defaults to 204.\n")
+	fmt.Fprintf(os.Stderr, "    -response or -r [response code] : Status code to respond with.  Defaults to 204.\n")
+	fmt.Fprintf(os.Stderr, "    -separator or -s [separator string] : Use the provided separator to separate messages.\n")
 }
 
 func main() {
