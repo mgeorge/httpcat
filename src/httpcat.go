@@ -20,20 +20,21 @@ var (
 	port      int
 	status    int
 	body      string
-	complete  bool
+	entire    bool
 	verbose   bool
 	server    bool
 	uri       string
 	accept    string
 	separator string
+	cors      bool
 )
 
 func requestHandler(resp http.ResponseWriter, req *http.Request) {
 
 	if verbose { fmt.Printf("Received a %s request to %s\n", req.Method, req.RequestURI) }
 
-	// print complete request
-	if complete {
+	// print entire request
+	if entire {
 		dump, _ := httputil.DumpRequest(req, true)
 		fmt.Println(string(dump[:]))
 
@@ -41,6 +42,31 @@ func requestHandler(resp http.ResponseWriter, req *http.Request) {
 	} else {
 		body, _ := ioutil.ReadAll(req.Body)
 		fmt.Println(string(body[:]))
+	}
+
+	// cors
+	if cors && req.Method == http.MethodOptions {
+		if verbose { fmt.Println("CORS preflight") }
+
+		if origin := req.Header.Get("Origin"); origin != "" {
+
+			resp.Header().Set("Access-Control-Allow-Origin", origin);
+
+			if headers := req.Header.Get("Access-Control-Request-Headers"); headers != "" {
+				resp.Header().Set("Access-Control-Allow-Headers", headers);
+			}
+
+			if method := req.Header.Get("Access-Control-Request-Method"); method != "" {
+				resp.Header().Set("Access-Control-Allow-Method", method);
+			}
+
+			resp.WriteHeader(200);
+
+			return;
+
+		} else {
+			if verbose { fmt.Println("Preflight did not contain 'Origin' header!") }
+		}
 	}
 
 	// send response
@@ -82,8 +108,8 @@ func sendRequest(uri string) {
 		fmt.Fprintln(os.Stderr, err)
 	} else {
 
-		// print complete response
-		if complete {
+		// print entire response
+		if entire {
 			dump, _ := httputil.DumpResponse(response, true)
 			fmt.Println(string(dump[:]))
 
@@ -105,8 +131,8 @@ func parseCommandLine() {
 	flag.StringVar(&body, "body", "", "")
 	flag.StringVar(&body, "b", "", "")
 
-	flag.BoolVar(&complete, "complete", false, "")
-	flag.BoolVar(&complete, "c", false, "")
+	flag.BoolVar(&entire, "entire", false, "")
+	flag.BoolVar(&entire, "e", false, "")
 
 	flag.StringVar(&separator, "separator", "", "")
 	flag.StringVar(&separator, "s", "", "")
@@ -116,6 +142,10 @@ func parseCommandLine() {
 
 	flag.StringVar(&accept, "accept", "", "")
 	flag.StringVar(&accept, "a", "", "")
+
+
+	flag.BoolVar(&cors, "cors", false, "")
+	flag.BoolVar(&cors, "c", false, "")
 
 	serverMode := flag.Bool("server", false, "")
 	clientMode := flag.Bool("client", false, "")
@@ -147,11 +177,13 @@ var usage = func() {
 	fmt.Fprintf(os.Stderr, "  Client mode\n")
 	fmt.Fprintf(os.Stderr, "    httpcat -client [options] http://uri-to-send-request-to.com\n")
 	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "    Currently only supports GET requests.\n")
+	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Server mode\n")
 	fmt.Fprintf(os.Stderr, "    httpcat -server [options]\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Options (either mode)\n")
-	fmt.Fprintf(os.Stderr, "    -complete or -c : Display entire request/response instead of just the body.\n")
+	fmt.Fprintf(os.Stderr, "    -entire or -e : Display entire request/response instead of just the body.\n")
 	fmt.Fprintf(os.Stderr, "    -verbose or -v : Be verbose.\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "  Options (client mode only)\n")
@@ -161,6 +193,7 @@ var usage = func() {
 	fmt.Fprintf(os.Stderr, "    -body or -b [body message] : Body to respond with.  Response code will default to 200.\n")
 	fmt.Fprintf(os.Stderr, "    -port or -p [port] : Port to listen on.\n")
 	fmt.Fprintf(os.Stderr, "    -response or -r [response code] : Status code to respond with.  Defaults to 204.\n")
+	fmt.Fprintf(os.Stderr, "    -cors or -c : Enable Cross Origin Resource Sharing support.\n")
 	fmt.Fprintf(os.Stderr, "    -separator or -s [separator string] : Use the provided separator to separate messages.\n")
 }
 
@@ -174,7 +207,7 @@ func main() {
 
 		if verbose {
 			fmt.Printf("Listening on port %d.\n", port)
-			if complete { fmt.Println("Displaying complete requests.\n") } else { fmt.Println("Displaying bodies only.\n") }
+			if entire { fmt.Println("Displaying entire request details.\n") } else { fmt.Println("Displaying bodies only.\n") }
 		}
 
 		startServer()
